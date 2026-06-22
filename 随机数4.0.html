@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>随机数生成器 4.0</title>
+    <style>
+        :root {
+            --primary: #4A90D9;
+            --primary-hover: #357ABD;
+            --bg: #f5f6fa;
+            --card-bg: #ffffff;
+            --text: #2d3436;
+            --text-light: #636e72;
+            --error-text: #d63031;
+            --error-bg: #ffeaa7;
+            --error-underline: #2d3436;
+            --correct-bg: #f1f2f6;
+            --radius: 12px;
+            --shadow: 0 2px 12px rgba(0,0,0,0.08);
+            --font-mono: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, monospace;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 24px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            gap: 24px;
+            align-items: flex-start;
+        }
+
+        /* 标题 */
+        .header {
+            max-width: 1200px;
+            margin: 0 auto 20px;
+            font-size: 26px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        /* 左栏 — 控制面板 */
+        .panel {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 28px;
+            flex: 0 0 380px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .panel h2 {
+            font-size: 20px;
+            font-weight: 600;
+            text-align: center;
+            color: var(--primary);
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-group label {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-light);
+        }
+
+        .form-group input {
+            height: 42px;
+            border: 2px solid #e0e3e8;
+            border-radius: 8px;
+            padding: 0 12px;
+            font-size: 16px;
+            font-family: var(--font-mono);
+            transition: border-color 0.2s;
+            outline: none;
+        }
+
+        .form-group input:focus {
+            border-color: var(--primary);
+        }
+
+        .range-row {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .range-row input { flex: 1; }
+        .range-row span { color: var(--text-light); font-weight: 600; }
+
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .btn {
+            flex: 1;
+            min-width: 80px;
+            height: 44px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: #fff;
+        }
+        .btn-primary:hover { background: var(--primary-hover); }
+
+        .btn-secondary {
+            background: #e8ecf1;
+            color: var(--text);
+        }
+        .btn-secondary:hover { background: #d5dbe3; }
+
+        .btn-danger {
+            background: #fff;
+            color: #d63031;
+            border: 2px solid #ff7675;
+        }
+        .btn-danger:hover { background: #fff5f5; }
+
+        /* 右栏 — 输出区 */
+        .output {
+            flex: 1;
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 28px;
+            min-height: 500px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .output h2 {
+            font-size: 20px;
+            font-weight: 600;
+            text-align: center;
+            color: var(--primary);
+            margin-bottom: 20px;
+        }
+
+        .output-empty {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #b2bec3;
+            font-size: 18px;
+        }
+
+        /* 数字网格 */
+        .number-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+            gap: 10px;
+            flex: 1;
+            align-content: start;
+        }
+
+        .number-cell {
+            background: var(--correct-bg);
+            border-radius: 8px;
+            padding: 10px 6px;
+            text-align: center;
+            font-family: var(--font-mono);
+            font-size: 16px;
+            font-weight: 500;
+            transition: transform 0.15s;
+            word-break: break-all;
+        }
+
+        .number-cell:hover { transform: scale(1.05); }
+
+        .number-cell.error {
+            background: var(--error-bg);
+            color: var(--error-text);
+            text-decoration: underline;
+            text-decoration-color: var(--error-underline);
+            text-underline-offset: 3px;
+            font-weight: 700;
+        }
+
+        /* 统计栏 */
+        .stats {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 20px;
+            padding: 14px;
+            background: #f8f9fb;
+            border-radius: 8px;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 22px;
+            font-weight: 700;
+            font-family: var(--font-mono);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-light);
+            margin-top: 2px;
+        }
+
+        .stat-item.error-count .stat-value { color: #d63031; }
+        .stat-item.pass-count .stat-value { color: #00b894; }
+        .stat-item.pass-rate .stat-value { color: var(--primary); }
+
+        /* 复制按钮 */
+        .copy-btn {
+            display: block;
+            margin: 16px auto 0;
+            padding: 10px 32px;
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        .copy-btn:hover { background: var(--primary-hover); }
+        .copy-btn.copied { background: #00b894; }
+
+        /* Toast 提示 */
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #2d3436;
+            color: #fff;
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        .toast.show { opacity: 1; }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .container { flex-direction: column; }
+            .panel { flex: none; width: 100%; }
+            .number-grid { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">🎲 随机数生成器</div>
+    <div class="container">
+        <!-- 左栏 - 控制面板 -->
+        <div class="panel">
+            <h2>控制面板</h2>
+            <div class="form-group">
+                <label for="errorRate">出错率 (%)</label>
+                <input type="number" id="errorRate" placeholder="默认 0" min="0" max="100" step="0.1" value="0">
+            </div>
+            <div class="form-group">
+                <label>范围</label>
+                <div class="range-row">
+                    <input type="number" id="rangeMin" placeholder="最小值" step="any">
+                    <span>—</span>
+                    <input type="number" id="rangeMax" placeholder="最大值" step="any">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="count">随机数数量</label>
+                <input type="number" id="count" placeholder="生成个数" min="1" max="500">
+            </div>
+            <div class="form-group">
+                <label for="decimalPlaces">小数位数 (0-7)</label>
+                <input type="number" id="decimalPlaces" placeholder="小数位数" min="0" max="7" value="0">
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="generateInt()">输出整数</button>
+                <button class="btn btn-primary" onclick="generateDecimal()">输出小数</button>
+                <button class="btn btn-primary" onclick="generateRatio()">输出比值</button>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-secondary" onclick="resetOutput()">重置</button>
+                <button class="btn btn-danger" onclick="resetAll()">重置全部</button>
+            </div>
+        </div>
+
+        <!-- 右栏 - 输出区 -->
+        <div class="output" id="outputPanel">
+            <h2>输出窗口</h2>
+            <div class="output-empty" id="emptyHint">点击上方按钮生成随机数</div>
+            <div class="number-grid" id="numberGrid" style="display:none;"></div>
+            <div class="stats" id="stats" style="display:none;">
+                <div class="stat-item error-count">
+                    <div class="stat-value" id="errorCount">0</div>
+                    <div class="stat-label">出错数</div>
+                </div>
+                <div class="stat-item pass-count">
+                    <div class="stat-value" id="passCount">0</div>
+                    <div class="stat-label">合格数</div>
+                </div>
+                <div class="stat-item pass-rate">
+                    <div class="stat-value" id="passRate">0%</div>
+                    <div class="stat-label">合格率</div>
+                </div>
+            </div>
+            <button class="copy-btn" id="copyBtn" onclick="copyAll()" style="display:none;">📋 一键复制</button>
+        </div>
+    </div>
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // ============================================================
+        // 常量
+        // ============================================================
+        /** 两个错误数之间的最小间隔（正确数个数） */
+        const MIN_ERROR_GAP = 3;
+
+        // ============================================================
+        // 工具函数
+        // ============================================================
+
+        /** 生成 [min, max] 范围内的随机整数 */
+        function randomInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        /**
+         * 生成 [min, max) 范围内的随机小数，精度由 digitScale 控制。
+         *
+         * @param {number} min 下限
+         * @param {number} max 上限（不含）
+         * @param {number} digitScale 精度倍数（1位→10, 2位→100, ...）
+         * @return {number} 随机小数值
+         */
+        function randomDecimal(min, max, digitScale) {
+            const raw = (max - min) * Math.random() + min;
+            return Math.round(raw * digitScale) / digitScale;
+        }
+
+        /** 根据小数位数返回精度倍数（1位→10, 2位→100, ..., 0位→1） */
+        function getDigitScale(places) {
+            return Math.pow(10, places);
+        }
+
+        /**
+         * 将数字格式化为指定位数的小数，末尾补零。
+         *
+         * @param {number} x 原始数值
+         * @param {number} places 小数位数
+         * @return {string} 格式化后的字符串
+         */
+        function toFixedDecimal(x, places) {
+            const scale = getDigitScale(places);
+            let f = Math.round(x * scale) / scale;
+            if (isNaN(f)) return '0';
+            let s = f.toString();
+            let dot = s.indexOf('.');
+            if (dot < 0) {
+                dot = s.length;
+                s += '.';
+            }
+            while (s.length <= dot + places) {
+                s += '0';
+            }
+            return s;
+        }
+
+        // ============================================================
+        // Toast 提示
+        // ============================================================
+
+        let toastTimer;
+
+        /** 显示短暂提示消息 */
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(function () {
+                toast.classList.remove('show');
+            }, 2000);
+        }
+
+        // ============================================================
+        // 输入读取与验证
+        // ============================================================
+
+        /**
+         * 读取所有表单值，返回解析后的配置对象。
+         *
+         * @return {{ errorRate: number, rangeMin: number, rangeMax: number, count: number, decimalPlaces: number } | null}
+         *         验证失败返回 null
+         */
+        function readConfig() {
+            const errorRate = parseFloat(document.getElementById('errorRate').value) || 0;
+            const rangeMin = parseFloat(document.getElementById('rangeMin').value);
+            const rangeMax = parseFloat(document.getElementById('rangeMax').value);
+            const count = parseInt(document.getElementById('count').value);
+            const decimalPlaces = parseInt(document.getElementById('decimalPlaces').value) || 0;
+
+            if (isNaN(rangeMin)) { showToast('请输入最小值'); return null; }
+            if (isNaN(rangeMax)) { showToast('请输入最大值'); return null; }
+            if (rangeMin >= rangeMax) { showToast('最小值必须小于最大值'); return null; }
+            if (isNaN(count) || count < 1) { showToast('请输入有效的生成数量'); return null; }
+            if (count > 500) { showToast('数量不能超过 500'); return null; }
+            if (decimalPlaces < 0 || decimalPlaces > 7) { showToast('小数位数范围 0-7'); return null; }
+            if (errorRate < 0 || errorRate > 100) { showToast('出错率范围 0-100'); return null; }
+
+            return { errorRate: errorRate, rangeMin: rangeMin, rangeMax: rangeMax, count: count, decimalPlaces: decimalPlaces };
+        }
+
+        // ============================================================
+        // 随机数生成
+        // ============================================================
+
+        /**
+         * 生成正确随机数列表。
+         *
+         * @param {number} count 数量
+         * @param {number} rangeMin 范围下限
+         * @param {number} rangeMax 范围上限
+         * @param {number} decimalPlaces 小数位数（0 表示整数）
+         * @return {Array<number>} 随机数数组
+         */
+        function generateCorrectNumbers(count, rangeMin, rangeMax, decimalPlaces) {
+            var numbers = [];
+            if (decimalPlaces === 0) {
+                for (var i = 0; i < count; i++) {
+                    numbers.push(randomInt(rangeMin, rangeMax));
+                }
+            } else {
+                var scale = getDigitScale(decimalPlaces);
+                for (var i = 0; i < count; i++) {
+                    numbers.push(randomDecimal(rangeMin, rangeMax, scale));
+                }
+            }
+            return numbers;
+        }
+
+        // ============================================================
+        // 错误注入（含间隔约束）
+        // ============================================================
+
+        /**
+         * 在 numbers 中注入错误值。
+         * 约束：任意两个错误位置之间至少间隔 MIN_ERROR_GAP 个正确数。
+         * 如果错误率过高无法满足间隔，自动降低错误数并提示。
+         *
+         * @param {Array} numbers 原始正确数列表
+         * @param {number} errorRate 出错率 (0-100)
+         * @param {number} rangeMin 范围下限
+         * @param {number} rangeMax 范围上限
+         * @param {number} decimalPlaces 小数位数
+         * @param {boolean} isDecimal 是否为小数模式
+         * @param {boolean} isRatio 是否为比值模式
+         * @return {{ numbers: Array, errorFlags: boolean[], actualErrorCount: number, adjusted: boolean }}
+         */
+        function injectErrors(numbers, errorRate, rangeMin, rangeMax, decimalPlaces, isDecimal, isRatio) {
+            var count = numbers.length;
+
+            // 计算请求的错误数量
+            var requestedErrorCount = Math.round(count * errorRate / 100);
+            if (requestedErrorCount === 0) {
+                return {
+                    numbers: numbers.slice(),
+                    errorFlags: new Array(count).fill(false),
+                    actualErrorCount: 0,
+                    adjusted: false
+                };
+            }
+
+            // 计算最大允许错误数（满足间隔约束）
+            // 每个错误占据 1 个位置 + 后面 MIN_ERROR_GAP 个正确位置 → 每个错误占 (1+MIN_ERROR_GAP) 个 slot
+            var slotSize = 1 + MIN_ERROR_GAP;
+            var maxErrors = Math.ceil(count / slotSize);
+
+            var errorCount = Math.min(requestedErrorCount, maxErrors);
+            var adjusted = errorCount < requestedErrorCount;
+
+            // 生成所有可用位置的索引
+            var available = [];
+            for (var i = 0; i < count; i++) {
+                available.push(i);
+            }
+
+            // 从可用位置中按间隔选取错误位置
+            var errorPositions = [];
+            var used = {};
+
+            while (errorPositions.length < errorCount && available.length > 0) {
+                var idx = randomInt(0, available.length - 1);
+                var pos = available[idx];
+
+                // 检查与已选位置的间隔
+                var valid = true;
+                for (var j = 0; j < errorPositions.length; j++) {
+                    if (Math.abs(pos - errorPositions[j]) <= MIN_ERROR_GAP) {
+                        valid = false;
+                        break;
+                    }
+                }
+
+                if (valid) {
+                    errorPositions.push(pos);
+                    // 标记该位置及其相邻位置为已占用
+                    for (var k = pos - MIN_ERROR_GAP; k <= pos + MIN_ERROR_GAP; k++) {
+                        if (k >= 0 && k < count) used[k] = true;
+                    }
+                    // 从 available 中移除被覆盖的位置
+                    var newAvailable = [];
+                    for (var m = 0; m < available.length; m++) {
+                        if (!used[available[m]]) newAvailable.push(available[m]);
+                    }
+                    available = newAvailable;
+                } else {
+                    // 该位置不可用，从候选中移除
+                    available.splice(idx, 1);
+                }
+            }
+
+            // 如果实际选出的位置少于目标（理论上不会，但做保护）
+            if (errorPositions.length < errorCount) {
+                adjusted = true;
+                errorCount = errorPositions.length;
+            }
+
+            // 构建错误标记数组
+            var errorFlags = new Array(count).fill(false);
+            var errorSet = {};
+            for (var p = 0; p < errorPositions.length; p++) {
+                errorSet[errorPositions[p]] = true;
+                errorFlags[errorPositions[p]] = true;
+            }
+
+            // 生成错误值
+            var result = numbers.slice();
+            var negative = rangeMin < 0;
+
+            for (var e = 0; e < errorPositions.length; e++) {
+                var pos = errorPositions[e];
+                if (isDecimal) {
+                    var scale = getDigitScale(decimalPlaces);
+                    if (pos % 2 === 0) {
+                        // 偶数位置：生成低于范围的值
+                        if (negative) {
+                            result[pos] = randomDecimal(rangeMin - 0.2 + 0.1, rangeMin - 0.1, scale);
+                        } else {
+                            result[pos] = randomDecimal(0, rangeMin - 0.1, scale);
+                        }
+                    } else {
+                        // 奇数位置：生成高于范围的值
+                        result[pos] = randomDecimal(rangeMax + 0.1, rangeMax + 0.2, scale);
+                    }
+                    result[pos] = parseFloat(toFixedDecimal(result[pos], decimalPlaces));
+                } else {
+                    if (pos % 2 === 0) {
+                        if (negative) {
+                            result[pos] = randomInt(rangeMin - 3, rangeMin - 1);
+                        } else {
+                            result[pos] = randomInt(0, rangeMin - 1);
+                        }
+                    } else {
+                        result[pos] = randomInt(rangeMax + 1, rangeMax + 3);
+                    }
+                }
+            }
+
+            return {
+                numbers: result,
+                errorFlags: errorFlags,
+                actualErrorCount: errorCount,
+                adjusted: adjusted
+            };
+        }
+
+        // ============================================================
+        // 渲染
+        // ============================================================
+
+        /** 存储当前生成的所有数值字符串（用于一键复制） */
+        var currentData = [];
+
+        /**
+         * 渲染生成结果到输出区。
+         *
+         * @param {Array} numbers 数值列表
+         * @param {boolean[]} errorFlags 错误标记数组
+         * @param {boolean} isRatio 是否为比值模式
+         * @param {boolean} adjusted 错误数是否被调整
+         * @param {number} errorCount 实际错误数
+         */
+        function renderResult(numbers, errorFlags, isRatio, adjusted, errorCount) {
+            var grid = document.getElementById('numberGrid');
+            var emptyHint = document.getElementById('emptyHint');
+            var stats = document.getElementById('stats');
+            var copyBtn = document.getElementById('copyBtn');
+
+            // 清空网格
+            grid.innerHTML = '';
+
+            var count = numbers.length;
+
+            // 构建数字卡片
+            for (var i = 0; i < count; i++) {
+                var cell = document.createElement('div');
+                cell.className = 'number-cell' + (errorFlags[i] ? ' error' : '');
+
+                if (isRatio) {
+                    cell.textContent = '1:' + numbers[i];
+                } else {
+                    cell.textContent = numbers[i];
+                }
+                grid.appendChild(cell);
+            }
+
+            // 显示网格，隐藏空状态
+            grid.style.display = 'grid';
+            emptyHint.style.display = 'none';
+            stats.style.display = 'flex';
+            copyBtn.style.display = 'block';
+
+            // 更新统计
+            var passCount = count - errorCount;
+            var passRate = count > 0 ? Math.round((passCount / count) * 1000) / 10 : 100;
+
+            document.getElementById('errorCount').textContent = errorCount;
+            document.getElementById('passCount').textContent = passCount;
+            document.getElementById('passRate').textContent = passRate + '%';
+
+            // 存储用于复制的数据
+            if (isRatio) {
+                currentData = [];
+                for (var d = 0; d < numbers.length; d++) {
+                    currentData.push('1:' + numbers[d]);
+                }
+            } else {
+                currentData = [];
+                for (var d = 0; d < numbers.length; d++) {
+                    currentData.push(String(numbers[d]));
+                }
+            }
+
+            // 如果错误数被调整过，给出提示
+            if (adjusted) {
+                showToast('⚠ 错误率过高，已自动降低以满足间隔要求（至少间隔 ' + MIN_ERROR_GAP + ' 个）');
+            }
+        }
+
+        // ============================================================
+        // 三个生成按钮
+        // ============================================================
+
+        /** 生成整数 */
+        function generateInt() {
+            var cfg = readConfig();
+            if (!cfg) return;
+
+            // 整数模式小数位数强制为 0
+            document.getElementById('decimalPlaces').value = '0';
+            cfg.decimalPlaces = 0;
+
+            var numbers = generateCorrectNumbers(cfg.count, cfg.rangeMin, cfg.rangeMax, cfg.decimalPlaces);
+            var result = injectErrors(numbers, cfg.errorRate, cfg.rangeMin, cfg.rangeMax, cfg.decimalPlaces, false, false);
+            renderResult(result.numbers, result.errorFlags, false, result.adjusted, result.actualErrorCount);
+        }
+
+        /** 生成小数 */
+        function generateDecimal() {
+            var cfg = readConfig();
+            if (!cfg) return;
+
+            var numbers = generateCorrectNumbers(cfg.count, cfg.rangeMin, cfg.rangeMax, cfg.decimalPlaces);
+            // 格式化为指定位数
+            var formatted = [];
+            for (var i = 0; i < numbers.length; i++) {
+                formatted.push(toFixedDecimal(numbers[i], cfg.decimalPlaces));
+            }
+            var result = injectErrors(formatted, cfg.errorRate, cfg.rangeMin, cfg.rangeMax, cfg.decimalPlaces, true, false);
+            renderResult(result.numbers, result.errorFlags, false, result.adjusted, result.actualErrorCount);
+        }
+
+        /** 生成比值 (1:N) */
+        function generateRatio() {
+            var cfg = readConfig();
+            if (!cfg) return;
+
+            var numbers = generateCorrectNumbers(cfg.count, cfg.rangeMin, cfg.rangeMax, cfg.decimalPlaces);
+            var formatted = [];
+            for (var i = 0; i < numbers.length; i++) {
+                formatted.push(toFixedDecimal(numbers[i], cfg.decimalPlaces));
+            }
+            var result = injectErrors(formatted, cfg.errorRate, cfg.rangeMin, cfg.rangeMax, cfg.decimalPlaces, true, true);
+            renderResult(result.numbers, result.errorFlags, true, result.adjusted, result.actualErrorCount);
+        }
+
+        // ============================================================
+        // 一键复制
+        // ============================================================
+
+        /** 复制所有数值（逗号分隔）到剪贴板 */
+        function copyAll() {
+            if (currentData.length === 0) {
+                showToast('没有可复制的数据');
+                return;
+            }
+
+            var text = currentData.join(', ');
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(function () {
+                    onCopySuccess();
+                }).catch(function () {
+                    fallbackCopy(text);
+                });
+            } else {
+                fallbackCopy(text);
+            }
+        }
+
+        /** 兼容方案：使用 textarea 复制 */
+        function fallbackCopy(text) {
+            var textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.left = '-9999px';
+            textarea.style.top = '-9999px';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                onCopySuccess();
+            } catch (e) {
+                showToast('复制失败，请手动复制');
+            }
+            document.body.removeChild(textarea);
+        }
+
+        /** 复制成功后的 UI 反馈 */
+        function onCopySuccess() {
+            var btn = document.getElementById('copyBtn');
+            var originalText = btn.textContent;
+            btn.textContent = '✓ 已复制';
+            btn.classList.add('copied');
+            setTimeout(function () {
+                btn.textContent = originalText;
+                btn.classList.remove('copied');
+            }, 1500);
+        }
+
+        // ============================================================
+        // 重置
+        // ============================================================
+
+        /** 重置输出区 */
+        function resetOutput() {
+            var grid = document.getElementById('numberGrid');
+            var emptyHint = document.getElementById('emptyHint');
+            var stats = document.getElementById('stats');
+            var copyBtn = document.getElementById('copyBtn');
+
+            grid.innerHTML = '';
+            grid.style.display = 'none';
+            emptyHint.style.display = 'flex';
+            stats.style.display = 'none';
+            copyBtn.style.display = 'none';
+
+            document.getElementById('errorCount').textContent = '0';
+            document.getElementById('passCount').textContent = '0';
+            document.getElementById('passRate').textContent = '0%';
+            currentData = [];
+        }
+
+        /** 重置全部（含输入框） */
+        function resetAll() {
+            resetOutput();
+            document.getElementById('errorRate').value = '';
+            document.getElementById('rangeMin').value = '';
+            document.getElementById('rangeMax').value = '';
+            document.getElementById('count').value = '';
+            document.getElementById('decimalPlaces').value = '';
+        }
+    </script>
+</body>
+</html>
