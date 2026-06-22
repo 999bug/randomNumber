@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>随机数生成器 4.0</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>🎲</text></svg>">
     <style>
         :root {
             --primary: #4A90D9;
@@ -54,7 +55,8 @@
             border-radius: var(--radius);
             box-shadow: var(--shadow);
             padding: 28px;
-            flex: 0 0 380px;
+            flex: 1 1 360px;
+            min-width: 300px;
             display: flex;
             flex-direction: column;
             gap: 20px;
@@ -143,7 +145,8 @@
 
         /* 右栏 — 输出区 */
         .output {
-            flex: 1;
+            flex: 1 1 360px;
+            min-width: 300px;
             background: var(--card-bg);
             border-radius: var(--radius);
             box-shadow: var(--shadow);
@@ -273,7 +276,7 @@
         /* 响应式 */
         @media (max-width: 768px) {
             .container { flex-direction: column; }
-            .panel { flex: none; width: 100%; }
+            .panel, .output { flex: none; width: 100%; min-width: 0; }
             .number-grid { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); }
         }
     </style>
@@ -583,7 +586,7 @@
                         // 奇数位置：生成高于范围的值
                         result[pos] = randomDecimal(rangeMax + 0.1, rangeMax + 0.2, scale);
                     }
-                    result[pos] = parseFloat(toFixedDecimal(result[pos], decimalPlaces));
+                    result[pos] = toFixedDecimal(result[pos], decimalPlaces);
                 } else {
                     if (pos % 2 === 0) {
                         if (negative) {
@@ -611,6 +614,8 @@
 
         /** 存储当前生成的所有数值字符串（用于一键复制） */
         var currentData = [];
+        /** 存储当前错误标记，与 currentData 一一对应 */
+        var currentErrorFlags = [];
 
         /**
          * 渲染生成结果到输出区。
@@ -659,18 +664,31 @@
             document.getElementById('passCount').textContent = passCount;
             document.getElementById('passRate').textContent = passRate + '%';
 
-            // 存储用于复制的数据
+            // 存储用于复制的数据，错误数用下划线包裹
             if (isRatio) {
                 currentData = [];
+            currentErrorFlags = [];
                 for (var d = 0; d < numbers.length; d++) {
-                    currentData.push('1:' + numbers[d]);
+                    var val = '1:' + numbers[d];
+                    if (errorFlags[d]) {
+                        val = '_' + val + '_';
+                    }
+                    currentData.push(val);
                 }
             } else {
                 currentData = [];
+            currentErrorFlags = [];
                 for (var d = 0; d < numbers.length; d++) {
-                    currentData.push(String(numbers[d]));
+                    var val = String(numbers[d]);
+                    if (errorFlags[d]) {
+                        val = '_' + val + '_';
+                    }
+                    currentData.push(val);
                 }
             }
+
+            // 存储错误标记供复制使用
+            currentErrorFlags = errorFlags.slice();
 
             // 如果错误数被调整过，给出提示
             if (adjusted) {
@@ -729,28 +747,84 @@
         // 一键复制
         // ============================================================
 
-        /** 复制所有数值（逗号分隔）到剪贴板 */
+        /** 复制所有数值（逗号分隔，错误数带下划线）到剪贴板，支持富文本 */
         function copyAll() {
             if (currentData.length === 0) {
                 showToast('没有可复制的数据');
                 return;
             }
 
-            var text = currentData.join(', ');
+            var plainText = currentData.join('，');
+            var htmlText = buildRichCopyHtml();
 
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(text).then(function () {
+            if (navigator.clipboard && navigator.clipboard.write) {
+                var blob = new Blob([htmlText], { type: 'text/html' });
+                var plainBlob = new Blob([plainText], { type: 'text/plain' });
+                var item = new ClipboardItem({
+                    'text/html': blob,
+                    'text/plain': plainBlob
+                });
+                navigator.clipboard.write([item]).then(function () {
                     onCopySuccess();
                 }).catch(function () {
-                    fallbackCopy(text);
+                    fallbackRichCopy(plainText, htmlText);
                 });
             } else {
-                fallbackCopy(text);
+                fallbackRichCopy(plainText, htmlText);
             }
         }
 
-        /** 兼容方案：使用 textarea 复制 */
-        function fallbackCopy(text) {
+        /** 构建带下划线的富文本 HTML */
+        function buildRichCopyHtml() {
+            var parts = [];
+            for (var i = 0; i < currentData.length; i++) {
+                if (i > 0) {
+                    parts.push('<span>，</span>');
+                }
+                // currentData 中错误值已经带 _ 包裹，用 errorFlags 判断
+                if (currentErrorFlags[i]) {
+                    // 去掉 _ 包裹，用 <u> 标签重新包裹
+                    var raw = String(currentData[i]).replace(/^_|_$/g, '');
+                    parts.push('<span><u>' + raw + '</u></span>');
+                } else {
+                    parts.push('<span>' + currentData[i] + '</span>');
+                }
+            }
+            return parts.join('');
+        }
+
+        /** 兼容方案：富文本复制 */
+        function fallbackRichCopy(plainText, htmlText) {
+            var container = document.createElement('div');
+            container.style.position = 'fixed';
+            container.style.left = '-9999px';
+            container.style.top = '-9999px';
+            container.innerHTML = htmlText;
+            document.body.appendChild(container);
+
+            var range = document.createRange();
+            range.selectNodeContents(container);
+            var selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+
+            try {
+                document.execCommand('copy');
+                onCopySuccess();
+            } catch (e) {
+                // 如果富文本也失败，兜底纯文本
+                selection.removeAllRanges();
+                document.body.removeChild(container);
+                fallbackPlainCopy(plainText);
+                return;
+            }
+
+            selection.removeAllRanges();
+            document.body.removeChild(container);
+        }
+
+        /** 最终兜底：纯文本复制 */
+        function fallbackPlainCopy(text) {
             var textarea = document.createElement('textarea');
             textarea.value = text;
             textarea.style.position = 'fixed';
@@ -800,6 +874,7 @@
             document.getElementById('passCount').textContent = '0';
             document.getElementById('passRate').textContent = '0%';
             currentData = [];
+            currentErrorFlags = [];
         }
 
         /** 重置全部（含输入框） */
