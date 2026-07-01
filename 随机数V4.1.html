@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>随机数生成器 4.0</title>
+    <title>随机数生成器 4.1</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>🎲</text></svg>">
     <style>
         :root {
@@ -282,7 +282,7 @@
     </style>
 </head>
 <body>
-    <div class="header">🎲 随机数生成器</div>
+    <div class="header">🎲 随机数生成器 4.1</div>
     <div class="container">
         <!-- 左栏 - 控制面板 -->
         <div class="panel">
@@ -774,20 +774,23 @@
             }
         }
 
+        /** 富文本复制的基础样式（宋体、小五、加粗） */
+        var RICH_COPY_STYLE = 'font-family:SimSun,宋体;font-size:9pt;font-weight:bold;';
+
         /** 构建带下划线的富文本 HTML */
         function buildRichCopyHtml() {
             var parts = [];
             for (var i = 0; i < currentData.length; i++) {
                 if (i > 0) {
-                    parts.push('<span>，</span>');
+                    parts.push('<span style="' + RICH_COPY_STYLE + '">，</span>');
                 }
                 // currentData 中错误值已经带 _ 包裹，用 errorFlags 判断
                 if (currentErrorFlags[i]) {
                     // 去掉 _ 包裹，用 <u> 标签重新包裹
                     var raw = String(currentData[i]).replace(/^_|_$/g, '');
-                    parts.push('<span><u>' + raw + '</u></span>');
+                    parts.push('<span style="' + RICH_COPY_STYLE + '"><u>' + raw + '</u></span>');
                 } else {
-                    parts.push('<span>' + currentData[i] + '</span>');
+                    parts.push('<span style="' + RICH_COPY_STYLE + '">' + currentData[i] + '</span>');
                 }
             }
             return parts.join('');
