@@ -11,9 +11,13 @@
 - **一键复制**：富文本复制，粘贴到 Word/WPS 中错误数自带下划线
 - 响应式布局，手机/电脑自适应
 
-## 使用方法
+## 在线使用
 
-1. 浏览器打开 `随机数V4.0.html`
+**https://999bug.github.io/randomNumber/**
+
+## 本地使用
+
+1. 浏览器打开 `index.html`
 2. 填写参数：
    - **出错率**：错误数据占比（0-100%）
    - **范围**：随机数取值范围
@@ -24,5 +28,6 @@
 
 ## 技术信息
 
-- 纯 HTML + CSS + JavaScript
+- 纯 HTML + CSS + JavaScript，单文件（`index.html`）
 - 零外部依赖，浏览器直接打开即用
+- 通过 GitHub Pages 部署在线版
